@@ -70,8 +70,43 @@ void setup()
 
 void loop()
 {
-    String path = "/temperaturas";
-  if (Firebase.pushFloat(firebaseData, path, dht.readTemperature())) {
+  String path = "/temperaturas";
+  //Actualizar el timestamp para luego guardar la temperatura con la hora
+  int timestamp;
+  if (Firebase.setTimestamp(firebaseData, path + "/ultimaActualizacion"))
+  {
+    Serial.println("PASSED");
+    Serial.println("PATH: " + firebaseData.dataPath());
+    Serial.println("TYPE: " + firebaseData.dataType());
+
+    //Timestamp saved in millisecond, get its seconds from intData()
+    Serial.print("TIMESTAMP (Seconds): ");
+    Serial.println(firebaseData.intData());
+
+    //Or print the total milliseconds from doubleData()
+    //Due to bugs in Serial.print in Arduino library, use printf to print double instead.
+    printf("TIMESTAMP (milliSeconds): %.0lf\n", firebaseData.doubleData());
+    timestamp = firebaseData.intData();
+    //Or print it from payload directly
+    Serial.print("TIMESTAMP (milliSeconds): ");
+    Serial.println(firebaseData.payload());
+
+    //Due to some internal server error, ETag cannot get from setTimestamp
+    //Try to get ETag manually
+    Serial.println("ETag: " + Firebase.getETag(firebaseData, path + "/Set/Timestamp"));
+    Serial.println("------------------------------------");
+    Serial.println();
+  }
+  else
+  {
+    Serial.println("FAILED");
+    Serial.println("REASON: " + firebaseData.errorReason());
+    Serial.println("------------------------------------");
+    Serial.println();
+  }    
+  Serial.println("temperatura: " + String(dht.readTemperature()));
+
+  if (Firebase.setFloat(firebaseData, path+"/"+String(timestamp), dht.readTemperature())) {
     Serial.println("temperatura: " + String(dht.readTemperature()));
 
     Serial.println(firebaseData.dataPath());
@@ -83,5 +118,7 @@ void loop()
   } else {
     Serial.println("error " + firebaseData.errorReason());
   }
+  
+  //delay(300000);
   delay(1000);
 }
